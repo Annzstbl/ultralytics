@@ -225,7 +225,9 @@ class BasePredictor:
 
             # Warmup model
             if not self.done_warmup:
-                self.model.warmup(imgsz=(1 if self.model.pt or self.model.triton else self.dataset.bs, 3, *self.imgsz))
+                # self.model.warmup(imgsz=(1 if self.model.pt or self.model.triton else self.dataset.bs, 3, *self.imgsz))
+                # for hyper spectral image, 3 is changed to the channel of source here
+                self.model.warmup(imgsz=(1 if self.model.pt or self.model.triton else self.dataset.bs, source.size()[1], *self.imgsz))
                 self.done_warmup = True
 
             self.seen, self.windows, self.batch = 0, [], None

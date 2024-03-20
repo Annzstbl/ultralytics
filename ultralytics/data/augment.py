@@ -431,7 +431,9 @@ class RandomPerspective:
             if self.perspective:
                 img = cv2.warpPerspective(img, M, dsize=self.size, borderValue=(114, 114, 114))
             else:  # affine
-                img = cv2.warpAffine(img, M[:2], dsize=self.size, borderValue=(114, 114, 114))
+                channel_list = cv2.split(img)
+                # img = cv2.warpAffine(img, M[:2], dsize=self.size, borderValue=(114, 114, 114))
+                img = cv2.merge([cv2.warpAffine(channel, M[:2], dsize=self.size, borderValue=(114, 114, 114)) for channel in channel_list])
         return img, M, s
 
     def apply_bboxes(self, bboxes, M):
@@ -727,9 +729,15 @@ class LetterBox:
             img = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
         top, bottom = int(round(dh - 0.1)) if self.center else 0, int(round(dh + 0.1))
         left, right = int(round(dw - 0.1)) if self.center else 0, int(round(dw + 0.1))
-        img = cv2.copyMakeBorder(
-            img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114, 114, 114)
-        )  # add border
+        # consider img with channels more than 3
+        if img.shape[2] > 3:
+            border_img = np.ones((img.shape[0]+top+bottom, img.shape[1]+left+right, img.shape[2]), dtype = img.dtype) * 144
+            border_img[top:img.shape[0]+top, left:img.shape[1]+left] = img
+            img = border_img
+        else:
+            img = cv2.copyMakeBorder(
+                img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114, 114, 114)
+            )  # add border
         if labels.get("ratio_pad"):
             labels["ratio_pad"] = (labels["ratio_pad"], (left, top))  # for evaluation
 
