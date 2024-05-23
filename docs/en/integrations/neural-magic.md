@@ -13,7 +13,7 @@ This guide shows you how to deploy YOLOv8 using Neural Magic's DeepSparse, how t
 ## Neural Magic’s DeepSparse
 
 <p align="center">
-  <img width="640" src="https://docs.neuralmagic.com/archive/docs/source/infographics/deepsparse.png" alt="Neural Magic’s DeepSparse Overview">
+  <img width="640" src="https://docs.neuralmagic.com/assets/images/nm-flows-55d56c0695a30bf9ecb716ea98977a95.png" alt="Neural Magic’s DeepSparse Overview">
 </p>
 
 [Neural Magic’s DeepSparse](https://neuralmagic.com/deepsparse/) is an inference run-time designed to optimize the execution of neural networks on CPUs. It applies advanced techniques like sparsity, pruning, and quantization to dramatically reduce computational demands while maintaining accuracy. DeepSparse offers an agile solution for efficient and scalable neural network execution across various devices.
@@ -109,10 +109,7 @@ With your YOLOv8 model in ONNX format, you can deploy and run inferences using D
         model_path = "path/to/yolov8n.onnx"
 
         # Set up the DeepSparse Pipeline
-        yolo_pipeline = Pipeline.create(
-            task="yolov8",
-            model_path=model_path
-        )
+        yolo_pipeline = Pipeline.create(task="yolov8", model_path=model_path)
 
         # Run the model on your images
         images = ["path/to/image.jpg"]
