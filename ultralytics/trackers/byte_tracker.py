@@ -108,8 +108,9 @@ class STrack(BaseTrack):
 
         self.tracklet_len = 0
         self.state = TrackState.Tracked
-        if frame_id == 1:
-            self.is_activated = True
+        # if frame_id == 1:
+            # self.is_activated = True
+        self.is_activated = True
         self.frame_id = frame_id
         self.start_frame = frame_id
 
@@ -295,6 +296,9 @@ class BYTETracker:
             STrack.multi_gmc(unconfirmed, warp)
 
         dists = self.get_dists(strack_pool, detections)
+        cls_costs = matching.cls_distance(strack_pool, detections)
+        # 同类0.99 不同类0.9
+        dists = dists + cls_costs * 0.09
         matches, u_track, u_detection = matching.linear_assignment(dists, thresh=self.args.match_thresh)
 
         for itracked, idet in matches:
@@ -311,7 +315,8 @@ class BYTETracker:
         r_tracked_stracks = [strack_pool[i] for i in u_track if strack_pool[i].state == TrackState.Tracked]
         # TODO
         dists = matching.iou_distance(r_tracked_stracks, detections_second)
-        matches, u_track, u_detection_second = matching.linear_assignment(dists, thresh=0.5)
+        # matches, u_track, u_detection_second = matching.linear_assignment(dists, thresh=0.5)
+        matches, u_track, u_detection_second = matching.linear_assignment(dists, thresh=0.9)
         for itracked, idet in matches:
             track = r_tracked_stracks[itracked]
             det = detections_second[idet]
