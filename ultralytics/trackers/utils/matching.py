@@ -136,3 +136,25 @@ def fuse_score(cost_matrix: np.ndarray, detections: list) -> np.ndarray:
     det_scores = np.expand_dims(det_scores, axis=0).repeat(cost_matrix.shape[0], axis=0)
     fuse_sim = iou_sim * det_scores
     return 1 - fuse_sim  # fuse_cost
+
+
+def cls_distance(atracks: list, btracks: list) -> np.ndarray:
+    """
+    Compute cost based on cls between tracks.
+
+    Args:
+        atracks (list[STrack] | list[np.ndarray]): List of tracks 'a' or bounding boxes.
+        btracks (list[STrack] | list[np.ndarray]): List of tracks 'b' or bounding boxes.
+
+    Returns:
+        (np.ndarray): Cost matrix computed based on IoU.
+    """
+
+    # assert isinstance(atracks[0], STrack) and isinstance(btracks[0], STrack)
+    atcls = [track.cls for track in atracks]
+    btcls = [track.cls for track in btracks]
+
+    cls_cost = np.zeros((len(atcls), len(btcls)), dtype=np.float32)
+    # 如果相等则为0，否则为1, 向量化代码
+    cls_cost = np.array(atcls)[:, None] != np.array(btcls)[None, :]
+    return cls_cost
