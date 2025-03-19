@@ -185,6 +185,8 @@ class Annotator:
             if check_version(pil_version, "9.2.0"):
                 self.font.getsize = lambda x: self.font.getbbox(x)[2:4]  # text width, height
         else:  # use cv2
+            if im.shape[2] > 3:# multi channels
+                im = np.ascontiguousarray(im[:,:,:3])
             assert im.data.contiguous, "Image not contiguous. Apply np.ascontiguousarray(im) to Annotator input images."
             self.im = im if im.flags.writeable else im.copy()
             self.tf = max(self.lw - 1, 1)  # font thickness
@@ -1045,7 +1047,9 @@ def plot_images(
         x, y = int(w * (i // ns)), int(h * (i % ns))  # block origin
         annotator.rectangle([x, y, x + w, y + h], None, (255, 255, 255), width=2)  # borders
         if paths:
-            annotator.text((x + 5, y + 5), text=Path(paths[i]).name[:40], txt_color=(220, 220, 220))  # filenames
+            # annotator.text((x + 5, y + 5), text=Path(paths[i]).name[:40], txt_color=(220, 220, 220))  # filenames
+            # 使用dir/filenames格式
+            annotator.text((x + 5, y + 5), text=Path(paths[i]).parts[-2] + '/' + Path(paths[i]).name[:40], txt_color=(220, 220, 220))
         if len(cls) > 0:
             idx = batch_idx == i
             classes = cls[idx].astype("int")

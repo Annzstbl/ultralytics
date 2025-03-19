@@ -36,16 +36,52 @@ from ultralytics.utils.downloads import download, safe_download, unzip_file
 from ultralytics.utils.ops import segments2boxes
 
 HELP_URL = "See https://docs.ultralytics.com/datasets for dataset formatting guidance."
-IMG_FORMATS = {"bmp", "dng", "jpeg", "jpg", "mpo", "png", "tif", "tiff", "webp", "pfm", "heic"}  # image suffixes
+IMG_FORMATS = {"bmp", "dng", "jpeg", "jpg", "mpo", "png", "tif", "tiff", "webp", "pfm", "heic", "npy"}  # image suffixes. npy for multi-channel images
 VID_FORMATS = {"asf", "avi", "gif", "m4v", "mkv", "mov", "mp4", "mpeg", "mpg", "ts", "wmv", "webm"}  # video suffixes
 PIN_MEMORY = str(os.getenv("PIN_MEMORY", True)).lower() == "true"  # global pin_memory for dataloaders
 FORMATS_HELP_MSG = f"Supported formats are:\nimages: {IMG_FORMATS}\nvideos: {VID_FORMATS}"
 
 
+# def img2label_paths(img_paths):
+#     """Define label paths as a function of image paths."""
+#     sa, sb = f"{os.sep}images{os.sep}", f"{os.sep}labels{os.sep}"  # /images/, /labels/ substrings
+#     return [sb.join(x.rsplit(sa, 1)).rsplit(".", 1)[0] + ".txt" for x in img_paths]
+
 def img2label_paths(img_paths):
     """Define label paths as a function of image paths."""
-    sa, sb = f"{os.sep}images{os.sep}", f"{os.sep}labels{os.sep}"  # /images/, /labels/ substrings
-    return [sb.join(x.rsplit(sa, 1)).rsplit(".", 1)[0] + ".txt" for x in img_paths]
+    # 定义可能的图像目录名称
+    # image_dirs = ['images', 'rgb', 'npy', 'TrainFrames'] 
+    image_dirs = ['images', 'npy', 'TrainFrames'] 
+    # TrainFrames for antiuav4th. The path is /data3/PublicDataset/Public/AntiUAV_4th/TrainFrames.
+    
+    # 创建相应的标签目录名称
+    label_dir = 'labels'
+    # label_dir_rgb = 'labels_rgb'
+    label_antiuav4th = 'Label_yolo'
+    label_dir_npy = 'yolo_det_labels'
+    
+    label_paths = []
+    for x in img_paths:
+        for img_dir in image_dirs:
+            # if img_dir == 'rgb':
+            #     raise ValueError("The 'rgb' directory is not supported.")
+            #     # dst_label = label_dir_rgb
+            if img_dir == 'TrainFrames':
+                dst_label = label_antiuav4th
+            elif img_dir == 'npy':
+                dst_label = label_dir_npy
+            else:
+                dst_label = label_dir
+
+            if f"{os.sep}{img_dir}{os.sep}" in x:
+                # 替换图像目录为标签目录
+                label_path = x.replace(f"{os.sep}{img_dir}{os.sep}", f"{os.sep}{dst_label}{os.sep}")
+                label_path = os.path.splitext(label_path)[0] + ".txt"
+                label_paths.append(label_path)
+                break  # 找到一个匹配后就退出循环
+
+    return label_paths
+
 
 
 def get_hash(paths):
@@ -103,10 +139,14 @@ def verify_image_label(args):
     nm, nf, ne, nc, msg, segments, keypoints = 0, 0, 0, 0, "", [], None
     try:
         istiff = os.path.splitext(im_file)[-1] in ['.tif', '.tiff']
+        isnpy = os.path.splitext(im_file)[-1] in ['.npy'] #multi-channel images
         # Verify images
         # if ext is tiff
         if istiff:
             im = tifffile.imread(im_file)
+            shape = im.shape[:2]
+        elif isnpy:
+            im = np.load(im_file)
             shape = im.shape[:2]
         else:
             im = Image.open(im_file)
@@ -114,7 +154,7 @@ def verify_image_label(args):
             shape = exif_size(im)  # image size
         shape = (shape[1], shape[0])  # hw
         assert (shape[0] > 9) & (shape[1] > 9), f"image size {shape} <10 pixels"
-        if not istiff:
+        if not istiff and not isnpy:
             assert im.format.lower() in IMG_FORMATS, f"invalid image format {im.format}. {FORMATS_HELP_MSG}"
             if im.format.lower() in {"jpg", "jpeg"}:
                 with open(im_file, "rb") as f:

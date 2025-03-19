@@ -273,10 +273,71 @@ class BaseModel(nn.Module):
         """
         model = weights["model"] if isinstance(weights, dict) else weights  # torchvision models are not dicts
         csd = model.float().state_dict()  # checkpoint state_dict as FP32
+
+        
+        # print those keys are not suitable for loading
+        not_exist = 0
+        shape_not_match = 0
+        for k in self.state_dict():
+            if k not in csd:
+                LOGGER.warning(f"Model state_dict key '{k}' not found in checkpoint state_dict")
+                not_exist += 1
+            elif self.state_dict()[k].shape != csd[k].shape:
+                LOGGER.warning(
+                    f"Model state_dict key '{k}' shape {self.state_dict()[k].shape} "
+                    f"doesn't match checkpoint state_dict shape {csd[k].shape}"
+                )
+                shape_not_match += 1
+        LOGGER.info(f"Model state_dict keys not found in checkpoint state_dict: {not_exist}")
+        LOGGER.info(f"Model state_dict keys with shape mismatch: {shape_not_match}")
+
         csd = intersect_dicts(csd, self.state_dict())  # intersect
         self.load_state_dict(csd, strict=False)  # load
         if verbose:
             LOGGER.info(f"Transferred {len(csd)}/{len(self.model.state_dict())} items from pretrained weights")
+
+    # def load_ch(self, weights, verbose=True):
+    #     """
+    #     多通道
+    #     Load the weights into the model.
+
+    #     Args:
+    #         weights (dict | torch.nn.Module): The pre-trained weights to be loaded.
+    #         verbose (bool, optional): Whether to log the transfer progress. Defaults to True.
+    #     """
+    #     model = weights["model"] if isinstance(weights, dict) else weights  # torchvision models are not dicts
+    #     csd = model.float().state_dict()  # checkpoint state_dict as FP32
+
+    #     ch_layers = [l for l in self.state_dict() if 'model.0.conv' in l ]
+
+    #     for ch_layer in ch_layers:
+    #         LOGGER.info(f'copying {ch_layer} from {csd[ch_layer].shape} to {self.state_dict()[ch_layer].shape}')
+    #         copy_layer = self.state_dict()[ch_layer].clone()
+    #         for  i in range(copy_layer.shape[1]):
+    #             copy_layer[:,i] = csd[ch_layer][:,i%3]
+    #         csd[ch_layer] = copy_layer
+
+    #     # print those keys are not suitable for loading
+    #     not_exist = 0
+    #     shape_not_match = 0
+    #     for k in self.state_dict():
+    #         if k not in csd:
+    #             LOGGER.warning(f"Model state_dict key '{k}' not found in checkpoint state_dict")
+    #             not_exist += 1
+    #         elif self.state_dict()[k].shape != csd[k].shape:
+    #             LOGGER.warning(
+    #                 f"Model state_dict key '{k}' shape {self.state_dict()[k].shape} "
+    #                 f"doesn't match checkpoint state_dict shape {csd[k].shape}"
+    #             )
+    #             shape_not_match += 1
+    #     LOGGER.info(f"Model state_dict keys not found in checkpoint state_dict: {not_exist}")
+    #     LOGGER.info(f"Model state_dict keys with shape mismatch: {shape_not_match}")
+
+    #     csd = intersect_dicts(csd, self.state_dict())  # intersect
+    #     self.load_state_dict(csd, strict=False)  # load
+    #     if verbose:
+    #         LOGGER.info(f"Transferred {len(csd)}/{len(self.model.state_dict())} items from pretrained weights")
+
 
     def loss(self, batch, preds=None):
         """

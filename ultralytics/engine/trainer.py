@@ -312,6 +312,7 @@ class BaseTrainer:
             momentum=self.args.momentum,
             decay=weight_decay,
             iterations=iterations,
+            fisrt_conv_lr_rate=self.args.fisrt_conv_lr_rate,
         )
         # Scheduler
         self._setup_scheduler()
@@ -750,7 +751,7 @@ class BaseTrainer:
             LOGGER.info("Closing dataloader mosaic")
             self.train_loader.dataset.close_mosaic(hyp=copy(self.args))
 
-    def build_optimizer(self, model, name="auto", lr=0.001, momentum=0.9, decay=1e-5, iterations=1e5):
+    def build_optimizer(self, model, name="auto", lr=0.001, momentum=0.9, decay=1e-5, iterations=1e5, fisrt_conv_lr_rate=1):
         """
         Constructs an optimizer for the given model, based on the specified optimizer name, learning rate, momentum,
         weight decay, and number of iterations.
@@ -768,7 +769,7 @@ class BaseTrainer:
         Returns:
             (torch.optim.Optimizer): The constructed optimizer.
         """
-        g = [], [], []  # optimizer parameter groups
+        g = [], [], [], []  # optimizer parameter groups # g[3]表示第一个conv层的参数
         bn = tuple(v for k, v in nn.__dict__.items() if "Norm" in k)  # normalization layers, i.e. BatchNorm2d()
         if name == "auto":
             LOGGER.info(
@@ -788,8 +789,17 @@ class BaseTrainer:
                     g[2].append(param)
                 elif isinstance(module, bn):  # weight (no decay)
                     g[1].append(param)
+                elif 'model.0.conv' in fullname:  # first conv layer
+                    g[3].append(param)
                 else:  # weight (with decay)
                     g[0].append(param)
+
+        assert len(g[3]) == 1, "Error: Find more than one first conv layer"
+        # 如果inchannel是3
+        if g[3][0].shape[1] == 3:
+            g[0].append(g[3].pop())
+            if fisrt_conv_lr_rate != 1:
+                LOGGER.warning(f'Input channel of first conv is 3, fisrt_conv_lr_rate isnot set to 1. Param first_conv_lr_rate t is ignored')
 
         if name in {"Adam", "Adamax", "AdamW", "NAdam", "RAdam"}:
             optimizer = getattr(optim, name, optim.Adam)(g[2], lr=lr, betas=(momentum, 0.999), weight_decay=0.0)
@@ -806,6 +816,9 @@ class BaseTrainer:
 
         optimizer.add_param_group({"params": g[0], "weight_decay": decay})  # add g0 with weight_decay
         optimizer.add_param_group({"params": g[1], "weight_decay": 0.0})  # add g1 (BatchNorm2d weights)
+        if g[3]:
+            LOGGER.info(f'lr of first conv layer is increased by {fisrt_conv_lr_rate} times')
+            optimizer.add_param_group({"params": g[3], "weight_decay": decay, "lr": lr * fisrt_conv_lr_rate})  # lr增大10倍
         LOGGER.info(
             f"{colorstr('optimizer:')} {type(optimizer).__name__}(lr={lr}, momentum={momentum}) with parameter groups "
             f'{len(g[1])} weight(decay=0.0), {len(g[0])} weight(decay={decay}), {len(g[2])} bias(decay=0.0)'

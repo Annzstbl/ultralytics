@@ -1073,9 +1073,13 @@ class RandomPerspective:
             if self.perspective:
                 img = cv2.warpPerspective(img, M, dsize=self.size, borderValue=(114, 114, 114))
             else:  # affine
-                channel_list = cv2.split(img)
-                # img = cv2.warpAffine(img, M[:2], dsize=self.size, borderValue=(114, 114, 114))
-                img = cv2.merge([cv2.warpAffine(channel, M[:2], dsize=self.size, borderValue=(114, 114, 114)) for channel in channel_list])
+                #! 这里如果是多通道必须用split和merge，但是可能会显著降低速度
+                if img.shape[2] == 3:
+                    img = cv2.warpAffine(img, M[:2], dsize=self.size, borderValue=(114, 114, 114))
+                else:
+                    img = np.stack([cv2.warpAffine(img[:,:,channel], M[:2], dsize=self.size, borderValue=(114, 114, 114)) for channel in range(img.shape[2])], axis=-1)
+                    # channel_list = cv2.split(img)
+                    # img = cv2.merge([cv2.warpAffine(channel, M[:2], dsize=self.size, borderValue=(114, 114, 114)) for channel in channel_list])
         return img, M, s
 
     def apply_bboxes(self, bboxes, M):
