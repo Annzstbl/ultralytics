@@ -159,7 +159,8 @@ class BaseDataset(Dataset):
                 try:
                     im = np.load(fn)
                     if self.npy2rgb:
-                        im = im[...,[2,3,5]]
+                        # im = im[...,[2,3,5]]
+                        im = im[...,[1,2,4]]
                 except Exception as e:
                     LOGGER.warning(f"{self.prefix}WARNING ⚠️ Removing corrupt *.npy image file {fn} due to: {e}")
                     Path(fn).unlink(missing_ok=True)
