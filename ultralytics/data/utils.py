@@ -51,22 +51,21 @@ def img2label_paths(img_paths):
     """Define label paths as a function of image paths."""
     # 定义可能的图像目录名称
     # image_dirs = ['images', 'rgb', 'npy', 'TrainFrames'] 
-    image_dirs = ['images', 'npy', 'TrainFrames'] 
+    image_dirs = ['images', 'npy', 'TrainFrames', 'rgb'] 
     # TrainFrames for antiuav4th. The path is /data3/PublicDataset/Public/AntiUAV_4th/TrainFrames.
     
     # 创建相应的标签目录名称
     label_dir = 'labels'
-    # label_dir_rgb = 'labels_rgb'
+    label_dir_rgb = 'yolo_det_labels'
     label_antiuav4th = 'Label_yolo'
     label_dir_npy = 'yolo_det_labels'
     
     label_paths = []
     for x in img_paths:
         for img_dir in image_dirs:
-            # if img_dir == 'rgb':
-            #     raise ValueError("The 'rgb' directory is not supported.")
-            #     # dst_label = label_dir_rgb
-            if img_dir == 'TrainFrames':
+            if img_dir == 'rgb':
+                dst_label = label_dir_rgb
+            elif img_dir == 'TrainFrames':
                 dst_label = label_antiuav4th
             elif img_dir == 'npy':
                 dst_label = label_dir_npy

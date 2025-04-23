@@ -50,7 +50,7 @@ for vid in os.listdir(TEST_ROOT_PATH):
         img_npy = np.load(os.path.join(TEST_ROOT_PATH, vid, img))
         if MODE == 'rgb':
             img_npy = np.ascontiguousarray(img_npy[..., [1,2,4]])
-        result = model(img_npy, imgsz=1280)
+        result = model(img_npy, imgsz=1280, conf=0.1, iou=0.6)
 
         if vis_count < vis_example:
             save_img = os.path.join(PREDICT_ROOT_PATH, 'vis', f'{vid}_{os.path.basename(img)}').replace('.npy','.jpg')

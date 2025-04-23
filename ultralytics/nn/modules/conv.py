@@ -330,3 +330,45 @@ class Concat(nn.Module):
     def forward(self, x):
         """Forward pass for the YOLOv8 mask Proto module."""
         return torch.cat(x, self.d)
+
+class ConvMSI(nn.Module):
+    default_act = nn.SiLU()  # default activation
+
+    def __init__(self, c1, c2, c3=8, k=(3, 7, 7), s=(1, 2, 2), groups=None):
+        """
+        Arguments:
+            c1 (int): 输入通道数, 一般为 1
+            c2 (int): 输出通道数（如 64)
+            c3 (int): 光谱数
+            k  (tuple): 3D 卷积核尺寸 (t, h, w)
+            s  (tuple): 3D 卷积步长 (t_stride, h_stride, w_stride)
+            groups (int): fuse depth-wise conv 的分组数，默认等于 c2
+        """
+        super().__init__()
+        assert c1==1 and c3>1, 'c1 must be 1 and c3 > 1'
+        # --- 首个 3D 卷积 + BN3d + SiLU ---
+        self.conv3d = nn.Conv3d(c1, c2, kernel_size=k, stride=s,
+                                padding=autopad(k), bias=False)
+        self.bn3d   = nn.BatchNorm3d(c2)
+        # --- 深度方向 fusion conv (depth-wise) ---
+        self.fuse   = nn.Conv3d(c2, c2, kernel_size=(c3,1,1),
+                                groups=groups or c2, bias=False)
+        # --- 后续 2D BN + 激活 ---
+        self.bn2d = nn.BatchNorm2d(c2)
+        self.act  = self.default_act
+
+    def forward(self, x):
+        """
+            x: [B, c1, c3, H, W] or [B, c3, H, W] @ c1 = 1
+        """
+        if x.ndim == 4:
+            x = x.unsqueeze(1)
+
+        # 3D conv + BN + SiLU
+        x = self.act(self.bn3d(self.conv3d(x)))
+        # depth-wise  fusion → [B, c2, 1, H', W']
+        x = self.fuse(x)
+        # squeeze 时序维度 → [B, c2, H', W']
+        x = x.squeeze(2)
+        # 最后 BN2d + SiLU
+        return self.act(self.bn2d(x))   

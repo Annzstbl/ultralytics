@@ -770,7 +770,9 @@ class BaseTrainer:
             (torch.optim.Optimizer): The constructed optimizer.
         """
         g = [], [], [], []  # optimizer parameter groups # g[3]表示第一个conv层的参数
+        scale_module_name = []
         bn = tuple(v for k, v in nn.__dict__.items() if "Norm" in k)  # normalization layers, i.e. BatchNorm2d()
+        conv = tuple(v for k, v in nn.__dict__.items() if "Conv" in k)  # convolutional layers, i.e. Conv2d()
         if name == "auto":
             LOGGER.info(
                 f"{colorstr('optimizer:')} 'optimizer=auto' found, "
@@ -789,12 +791,15 @@ class BaseTrainer:
                     g[2].append(param)
                 elif isinstance(module, bn):  # weight (no decay)
                     g[1].append(param)
-                elif 'model.0.conv' in fullname:  # first conv layer
+                elif 'model.0' in fullname and isinstance(module, conv):  # first conv layer
                     g[3].append(param)
+                    scale_module_name.append(fullname)
                 else:  # weight (with decay)
                     g[0].append(param)
 
-        assert len(g[3]) == 1, "Error: Find more than one first conv layer"
+        if len(g[3])!=1:
+            LOGGER.warning(f"Warning: Find more than one first conv layer, please check the model.")
+            LOGGER.warning(f"First conv: {scale_module_name}")
         # 如果inchannel是3
         if g[3][0].shape[1] == 3:
             g[0].append(g[3].pop())
@@ -817,7 +822,7 @@ class BaseTrainer:
         optimizer.add_param_group({"params": g[0], "weight_decay": decay})  # add g0 with weight_decay
         optimizer.add_param_group({"params": g[1], "weight_decay": 0.0})  # add g1 (BatchNorm2d weights)
         if g[3]:
-            LOGGER.info(f'lr of first conv layer is increased by {fisrt_conv_lr_rate} times')
+            LOGGER.info(f'lr of first conv layer({scale_module_name}) is increased by {fisrt_conv_lr_rate} times')
             optimizer.add_param_group({"params": g[3], "weight_decay": decay, "lr": lr * fisrt_conv_lr_rate})  # lr增大10倍
         LOGGER.info(
             f"{colorstr('optimizer:')} {type(optimizer).__name__}(lr={lr}, momentum={momentum}) with parameter groups "

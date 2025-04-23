@@ -3,7 +3,7 @@ import torch
 import torch
 import torch.nn as nn
 import math
-
+from ultralytics.nn.modules import ConvMSI
 
 def load_multi_channel_pt(path, ch_num, dst_path, version='RGBRGB'):
     '''
@@ -97,6 +97,35 @@ def load_multi_channel_pt(path, ch_num, dst_path, version='RGBRGB'):
             break
 
     # 保存新的模型
+    pt['model'] = model
+    torch.save(pt, dst_path)
+    return dst_path
+
+
+def load_convhsi_pt(path, dst_path, version="copy"):
+    
+    # 假设你的pt文件存储的是一个nn.Module模型
+    # 读取模型
+    pt = torch.load(path)
+    model = pt['model']
+
+    w2d = model.model[0].conv.weight.data
+    b2d = model.model[0].conv.bias.data if model.model[0].conv.bias is not None else None
+
+    w3d = w2d.unsqueeze(1)
+
+    # 创建新的卷积层
+    old_conv = model.model[0]
+    # 先硬编码
+    new_conv = ConvMSI(
+        c1=1, 
+        c2=64, 
+        c3=8,
+        k=[3,3,3],
+        s=[1,2,2,],)
+    new_conv.conv3d.weight.data = w3d
+    new_conv.bn2d = old_conv.bn
+    model.model[0] = new_conv
     pt['model'] = model
     torch.save(pt, dst_path)
     return dst_path
