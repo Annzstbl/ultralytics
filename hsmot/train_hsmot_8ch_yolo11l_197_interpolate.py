@@ -7,11 +7,11 @@ from hsmot.load_multi_channel_pt import load_multi_channel_pt
 
 # 加载yolo11l模型
 pt_file = '/data3/litianhao/hsmot/yolo11/yolo11l.pt'
-train_cfg = '/data/users/litianhao/ultralytics/hsmot/cfg/8ch.yaml'
-data_cfg = '/data/users/litianhao/ultralytics/hsmot/cfg_data/hsmot_8ch.yaml'
-model_cfg = '/data/users/litianhao/ultralytics/ultralytics/cfg/models/11/yolo11l-obb-8ch.yaml'
+train_cfg = '/data/users/litianhao/hsmot_code/ultralytics/hsmot/cfg/8ch.yaml'
+data_cfg = '/data/users/litianhao/hsmot_code/ultralytics/hsmot/cfg_data/hsmot_8ch.yaml'
+model_cfg = '/data/users/litianhao/hsmot_code/ultralytics/ultralytics/cfg/models/11/yolo11l-obb-8ch.yaml'
 
-experiment_name = 'yolov11l_8ch_CocoPretrain_Interpolate_FirstConv_imgsize1280_4gpu'
+experiment_name = 'yolov11l_8ch_CocoPretrain_Interpolate_imgsize1280_2gpu_bs8'
 
 
 model = YOLO(model_cfg).load(load_multi_channel_pt(pt_file, 8, pt_file.replace('.pt', '_int_8ch.pt'), version='interpolate'))
@@ -21,12 +21,12 @@ model = YOLO(model_cfg).load(load_multi_channel_pt(pt_file, 8, pt_file.replace('
 results = model.train(
     data=data_cfg,
     epochs=50, 
-    device = [4,5,6,7],
+    device = [3,4],
     project = '/data3/litianhao/hsmot/yolo11',
     task = "obb",
     name = experiment_name,
     batch = 8,
     imgsz = 1280,
     cfg = train_cfg,
-    workers = 0,
+    workers = 2,
     )
