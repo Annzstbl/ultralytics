@@ -85,7 +85,43 @@ def load_multi_channel_pt(path, ch_num, dst_path, version='RGBRGB'):
         
         # 复制原始权重到新的卷积层
         new_conv.weight.data = expanded_weight
+    elif version == 'table':
+        tables = [
+            [93, 0, 255],
+            [0, 247, 255],
+            [163, 255, 0],
+            [255, 180, 0],
+            [255, 0, 0],
+            [209, 0, 0],
+            [163, 0, 0],
+            [87, 0, 0]]
+        R_weight = original_weight[:, 0, :, :]
+        G_weight = original_weight[:, 1, :, :]
+        B_weight = original_weight[:, 2, :, :]
 
+        weight_list = []
+        for table in tables:
+            weight = (R_weight * table[0] + G_weight * table[1] + B_weight * table[2]) / 255.0 / (sum([1 for i in table if i != 0]))
+            weight = weight.unsqueeze(1)
+            weight_list.append(weight)
+        weight_concat = torch.cat(weight_list, dim=1)
+        expanded_weight = weight_concat
+
+        # 创建新的卷积层
+        new_conv = nn.Conv2d(in_channels=ch_num,
+                            out_channels=first_conv.out_channels,
+                            kernel_size=first_conv.kernel_size,
+                            stride=first_conv.stride,
+                            padding=first_conv.padding,
+                            dilation=first_conv.dilation,
+                            groups=first_conv.groups,
+                            bias=(first_conv.bias is not None))
+        # 复制原始权重到新的卷积层
+        new_conv.weight.data = expanded_weight                
+
+    else:
+        raise ValueError(f"Unsupported version: {version}.")
+    
     # 如果原始层有bias，则复制bias
     if first_conv.bias is not None:
         new_conv.bias.data = first_conv.bias.data
