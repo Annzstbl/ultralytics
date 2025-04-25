@@ -156,7 +156,12 @@ class BaseValidator:
 
             model.eval()
             # get model's input channel
-            in_channels = model.model.model[0].conv.in_channels
+            if hasattr(model.model.model[0], "conv"):
+                in_channels = model.model.model[0].conv.in_channels
+            elif hasattr(model.model.model[0], "conv3d"):
+                in_channels = 8 #! hard coded for 3D model
+                # logger
+                LOGGER.warning("WARNING ⚠️ 3D model detected, in channels is set to 8 by hard coded.")
             model.warmup(imgsz=(1 if pt else self.args.batch, in_channels, imgsz, imgsz))  # warmup
 
         self.run_callbacks("on_val_start")

@@ -11,7 +11,7 @@ train_cfg = '/data/users/wangying01/lth/hsmot/ultralytics/hsmot/cfg/8ch.yaml'
 data_cfg = '/data/users/wangying01/lth/hsmot/ultralytics/hsmot/cfg_data_99/hsmot_8ch.yaml'
 model_cfg = '/data/users/wangying01/lth/hsmot/ultralytics/ultralytics/cfg/models/11/yolo11l-obb-8ch-convmsi.yaml'
 
-experiment_name = '99/yolov11l_8ch_CocoPretrain_convhsi_imgsize1280_1gpu2' 
+experiment_name = '99/yolov11l_8ch_CocoPretrain_convhsi_imgsize1280_1gpu' 
 
 
 model = YOLO(model_cfg).load(load_convhsi_pt(pt_file, pt_file.replace('.pt', 'convhsi.pt')))
