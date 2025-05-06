@@ -334,7 +334,7 @@ class Concat(nn.Module):
 class ConvMSI(nn.Module):
     default_act = nn.SiLU()  # default activation
 
-    def __init__(self, c1, c2, c3=8, k=(3, 7, 7), s=(1, 2, 2), groups=None):
+    def __init__(self, c1, c2, c3=8, k=(3, 7, 7), s=(1, 2, 2), p=1, groups=None):
         """
         Arguments:
             c1 (int): 输入通道数, 一般为 1
@@ -348,10 +348,11 @@ class ConvMSI(nn.Module):
         assert c1==1 and c3>1, 'c1 must be 1 and c3 > 1'
         # --- 首个 3D 卷积 + BN3d + SiLU ---
         self.conv3d = nn.Conv3d(c1, c2, kernel_size=k, stride=s,
-                                padding=autopad(k), bias=False)
+                                padding=[p, autopad(k[1]), autopad(k[2])], bias=False)
+        D_out = math.floor((c3 + 2*p - 1*(k[0] - 1) - 1)/s[0]) + 1
         self.bn3d   = nn.BatchNorm3d(c2)
         # --- 深度方向 fusion conv (depth-wise) ---
-        self.fuse   = nn.Conv3d(c2, c2, kernel_size=(c3,1,1),
+        self.fuse   = nn.Conv3d(c2, c2, kernel_size=(D_out,1,1),
                                 groups=groups or c2, bias=False)
         # --- 后续 2D BN + 激活 ---
         self.bn2d = nn.BatchNorm2d(c2)
