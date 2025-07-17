@@ -14,6 +14,11 @@ from .block import DFL, BNContrastiveHead, ContrastiveHead, Proto
 from .conv import Conv, DWConv
 from .transformer import MLP, DeformableTransformerDecoder, DeformableTransformerDecoderLayer
 from .utils import bias_init_with_prob, linear_init
+import os
+import cv2
+import numpy as np
+import torch
+from datetime import datetime
 
 __all__ = "Detect", "Segment", "Pose", "Classify", "OBB", "RTDETRDecoder", "v10Detect"
 
@@ -212,6 +217,7 @@ class OBB(Detect):
         if not self.training:
             self.angle = angle
         x = Detect.forward(self, x)
+        # self.visualize_tensor_heatmap_lth(x[1][0])
         if self.training:
             return x, angle
         return torch.cat([x, angle], 1) if self.export else (torch.cat([x[0], angle], 1), (x[1], angle))
@@ -220,6 +226,64 @@ class OBB(Detect):
         """Decode rotated bounding boxes."""
         return dist2rbox(bboxes, self.angle, anchors, dim=1)
 
+
+    def visualize_tensor_heatmap_lth(
+        self,
+        feat_lth: torch.Tensor,
+        # save_dir: str = "/data3/litianhao/hsmot/paper/yolo118ch",
+        save_dir: str = "/data3/litianhao/hsmot/paper/yolo113ch",
+        method: str = "max",  # "mean" or "max" or "channel"
+        channel_idx: int = 0,
+        # figsize: tuple = (6, 5),
+        cmap: str = cv2.COLORMAP_JET,
+        norm = True
+    ):
+        """
+        Visualize a 4D feature tensor [1, C, H, W] as a heatmap.
+        
+        Args:
+            feat (torch.Tensor): Input tensor on GPU with shape [1, C, H, W].
+            save_path (str): Path to save the generated heatmap image.
+            method (str): Aggregation method: "mean", "max", or "channel".
+            channel_idx (int): If method=="channel", index of channel to visualize.
+            figsize (tuple): Size of the matplotlib figure.
+            cmap (str): Matplotlib colormap name.
+        """
+
+        # Move to CPU and remove batch dimension
+        feat_cpu = feat_lth.detach().cpu().squeeze(0)  # [C, H, W]
+        
+        # feat_cpu = feat_lth
+        if method == "mean":
+            heatmap = feat_cpu.mean(dim=0).numpy()
+        elif method == "max":
+            heatmap = feat_cpu.max(dim=0).values.numpy()
+        elif method == "channel":
+            heatmap = feat_cpu[channel_idx].numpy()
+        else:
+            raise ValueError("method must be 'mean', 'max', or 'channel'")
+
+        if norm:
+            # Normalize to 0-255
+            hm_norm = cv2.normalize(heatmap, None, alpha=0, beta=255, 
+                                    norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+        else:
+            hm_norm = np.clip(heatmap, 0, 255).astype(np.uint8)
+        # Apply colormap
+        heatmap = cv2.applyColorMap(hm_norm, cmap)
+        # Save image
+
+        # Build filename using current timestamp
+        # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        now = datetime.now()
+        timestamp = now.strftime("%Y%m%d_%H%M%S") + f"_{now.microsecond // 1000:03d}"
+
+        filename = f"heatmap_{timestamp}.png"
+        save_path = os.path.join(save_dir, filename)
+
+        # Save image
+        cv2.imwrite(save_path, heatmap)
+        print(f"Heatmap saved to {save_path}")
 
 class Pose(Detect):
     """YOLO Pose head for keypoints models."""

@@ -118,7 +118,15 @@ def load_multi_channel_pt(path, ch_num, dst_path, version='RGBRGB'):
                             bias=(first_conv.bias is not None))
         # 复制原始权重到新的卷积层
         new_conv.weight.data = expanded_weight                
-
+    elif version == 'random':
+        new_conv = nn.Conv2d(in_channels=ch_num,
+                    out_channels=first_conv.out_channels,
+                    kernel_size=first_conv.kernel_size,
+                    stride=first_conv.stride,
+                    padding=first_conv.padding,
+                    dilation=first_conv.dilation,
+                    groups=first_conv.groups,
+                    bias=(first_conv.bias is not None))
     else:
         raise ValueError(f"Unsupported version: {version}.")
     

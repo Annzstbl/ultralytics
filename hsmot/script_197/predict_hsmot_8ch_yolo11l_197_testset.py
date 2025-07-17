@@ -9,7 +9,7 @@ import torch
 # 待预测的数据集路径
 TEST_ROOT_PATH = "/data/users/litianhao/data/hsmot/test/npy"
 # 输出预测结果的路径
-PREDICT_ROOT_PATH = "/data/users/litianhao/hsmot_code/workdir/yolo11/predict_testset_yolov11l_8ch_CocoPretrain_CopyFirstConv_imgsize1280_4gpu"
+PREDICT_ROOT_PATH = "/data/users/litianhao/hsmot_code/workdir/yolo11/debug"
 # 训练权重文件
 WEIGHTS_FILE = "/data/users/litianhao/hsmot_code/workdir/yolo11/yolov11l_8ch_CocoPretrain_CopyFirstConv_imgsize1280_4gpu/weights/last.pt"
 BATCH_SIZE = 4
@@ -49,5 +49,5 @@ for vid in os.listdir(TEST_ROOT_PATH):
                 score = float(score.cpu().numpy())  # 转换为浮点数
 
                 # 将结果写入文件
-                f.write(f"{x1} {y1} {x2} {y2} {x3} {y3} {x4} {y4} {cls} {score:.6f}\n")
+                # f.write(f"{x1} {y1} {x2} {y2} {x3} {y3} {x4} {y4} {cls} {score:.6f}\n")
     # break
