@@ -18,6 +18,7 @@ from ultralytics.data.utils import FORMATS_HELP_MSG, HELP_URL, IMG_FORMATS
 from ultralytics.utils import DEFAULT_CFG, LOCAL_RANK, LOGGER, NUM_THREADS, TQDM
 
 import tifffile
+from sklearn.decomposition import PCA
 
 class BaseDataset(Dataset):
     """
@@ -105,6 +106,7 @@ class BaseDataset(Dataset):
         self.transforms = self.build_transforms(hyp=hyp)
 
         self.npy2rgb = hyp.get("npy2rgb")
+        self.npy2rgb_pca = hyp.get("npy2rgb_pca")
 
     def get_img_files(self, img_path):
         """Read image files."""
@@ -159,11 +161,17 @@ class BaseDataset(Dataset):
                 try:
                     im = np.load(fn)
                     if self.npy2rgb:
-                        # im = im[...,[2,3,5]]
-                        im = im[...,[1,2,4]]
+                        if self.npy2rgb_pca:
+                            flat = im.reshape(-1, im.shape[-1])#(HW, 8)
+                            pca = PCA(n_components=3)
+                            flat_pca = pca.fit_transform(flat)
+                            img_pca = flat_pca.T.reshape(im.shape[0], im.shape[1], 3)
+                            im = img_pca
+                        else:
+                            im = im[...,[2,3,5]]
                 except Exception as e:
                     LOGGER.warning(f"{self.prefix}WARNING ⚠️ Removing corrupt *.npy image file {fn} due to: {e}")
-                    Path(fn).unlink(missing_ok=True)
+                    # Path(fn).unlink(missing_ok=True)
                     im = cv2.imread(f)  # BGR
             else:  # read image
                 if os.path.splitext(f)[-1] in ['.tif', '.tiff']:

@@ -182,6 +182,7 @@ CFG_BOOL_KEYS = {  # boolean-only arguments
     "profile",
     "multi_scale",
     "npy2rgb",
+    "npy2rgb_pca",
 }
 
 
